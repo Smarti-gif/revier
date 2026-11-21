@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Revier Hohenweiden</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+ :root{--chip:#f0efeb;--bg:#f6f5f2;--karte:#fff;--text:#1d1d1b;--grau:#6b6b66;--linie:#e3e1dc;
+       --ndvi:#2e7d32;--band:#8a8a84;--regen:#2f74b5;--feuchte:#00838f;--bilanz:#b5651d;--radar:#7b3fa0}
+ @media (prefers-color-scheme:dark){:root{--chip:#2a2a27;--bg:#161615;--karte:#21211f;--text:#ecebe7;
+       --grau:#9a9a94;--linie:#34332f;--ndvi:#66bb6a;--band:#8f8f88;--regen:#5fa0e0;
+       --feuchte:#4dd0e1;--bilanz:#e0a060;--radar:#c08be0}}
+ *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);
+   font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+ main{max-width:1000px;margin:0 auto;padding:20px 16px 40px}
+ a{color:var(--grau)} h1{font-size:20px;margin:0 0 2px}
+ .unter{color:var(--grau);font-size:13px;margin-bottom:14px}
+ .wahl{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+ select{flex:1;min-width:150px;padding:9px;border:1px solid var(--linie);border-radius:8px;
+   background:var(--karte);color:var(--text);font:inherit}
+ .info{background:var(--karte);border:1px solid var(--linie);border-radius:10px;
+   padding:10px 14px;margin-bottom:12px}
+ .info b{font-size:17px} .info span{color:var(--grau);font-size:13px}
+ .diagramm{background:var(--karte);border:1px solid var(--linie);border-radius:10px;
+   padding:12px;margin-bottom:12px;height:400px;display:flex;flex-direction:column} .diagramm.klein{height:300px}
+ .flaeche{flex:1;min-height:0;position:relative}
+ .dkopf{font-weight:700;font-size:13.5px;margin:2px 40px 8px 2px}
+ .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+ .chip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px 5px 9px;border-radius:20px;cursor:pointer;
+   border:2px solid transparent;background:var(--chip);color:var(--text);font:500 13px system-ui;
+   transition:opacity .25s,border-color .25s,background .25s,box-shadow .25s}
+ .chip i{width:13px;height:13px;border-radius:3px;flex:none}
+ .chip i.strich{height:3px;border-radius:2px} .chip i.gestr{height:0;border-top:2px dashed;border-radius:0;background:none!important}
+ .chip i.dreieck{width:0;height:0;border-radius:0;background:none!important;border-left:7px solid transparent;
+   border-right:7px solid transparent;border-top:11px solid #e53935}
+ .chip:hover{border-color:var(--linie)} .chip:focus-visible{outline:2px solid var(--akzent);outline-offset:2px}
+ .chips.fokus .chip{opacity:.42}
+ .chips.fokus .chip.an{opacity:1;border-color:var(--akzent);background:var(--karte);box-shadow:0 2px 10px rgba(0,0,0,.12)}
+ .chip .x{display:none;color:var(--grau);font-size:11px} .chip.an .x{display:inline}
+ .gross .dkopf{font-size:20px} .gross .chip{font-size:16px;padding:7px 14px 7px 11px}
+ @media (max-width:700px){.diagramm{height:440px} .diagramm.klein{height:360px} .chip{font-size:12.5px}}
+ .hinweis{color:var(--grau);font-size:12px;margin:0 0 14px}
+ ul.er{list-style:none;padding:0;margin:0 0 14px} ul.er li{background:var(--karte);
+   border:1px solid var(--linie);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:14px}
+ .bilder{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+ .bilder figure{margin:0;background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:8px}
+ .bilder img{width:100%;border-radius:6px;display:block} figcaption{font-size:13px;color:var(--grau);padding:6px 2px 0}
+ #schleier{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;
+   transition:opacity .32s ease;z-index:50}
+ #schleier.an{opacity:1;pointer-events:auto}
+ #querhinweis{position:fixed;left:0;right:0;top:90vh;text-align:center;color:#fff;font-size:14px;text-shadow:0 1px 6px #000,0 0 2px #000;
+   opacity:0;transition:opacity .3s;z-index:61;pointer-events:none}
+ #querhinweis.an{opacity:.85}
+ .zoombar{cursor:zoom-in;position:relative}
+ .gross{position:fixed!important;z-index:60;margin:0!important;cursor:default;transform-origin:top left;
+   box-shadow:0 24px 70px rgba(0,0,0,.45)}
+ .diagramm.gross{left:max(3vw,calc(50vw - 800px));top:8vh;width:min(94vw,1600px)!important;height:84vh!important;padding:18px 22px}
+ figure.gross{padding:4px!important;background:#fff}
+ figure.gross img{width:100%;height:100%;object-fit:contain;border-radius:6px}
+ figure.gross figcaption{display:none}
+ .zu{display:none;position:absolute;top:8px;right:10px;width:34px;height:34px;border-radius:50%;
+   border:1px solid var(--linie);background:var(--karte);color:var(--text);font-size:18px;
+   line-height:30px;text-align:center;cursor:pointer;z-index:2}
+ .gross .zu{display:block}
+
+ /* ---- Hilfe: i-Knoepfe, Kurz-Tipp, Erklaer-Bereich ---- */
+ :root{--akzent:#2e7d32;--akzent-text:#fff;--feld:#f0efeb}
+ @media (prefers-color-scheme:dark){:root{--akzent:#8fc79a;--akzent-text:#161615;--feld:#2a2a27}}
+ [data-thema]{position:relative}
+ .abschnitt{font-size:15px;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+ .ik{position:absolute;top:9px;right:10px;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--grau);
+   background:var(--karte);color:var(--grau);font:700 13px/22px Georgia,serif;font-style:italic;text-align:center;
+   cursor:pointer;z-index:3;padding:0;transition:background .15s,color .15s,border-color .15s}
+ .ik:hover,.ik.an{background:var(--akzent);border-color:var(--akzent);color:var(--akzent-text)}
+ .abschnitt .ik{position:static}
+ .info .ik{top:50%;transform:translateY(-50%)} .info{padding-right:46px}
+ figure .ik{top:14px;right:14px}
+ .gross .ik{display:none}
+ #tipp{position:absolute;z-index:40;width:min(330px,calc(100vw - 24px));background:var(--karte);color:var(--text);
+   border:1.5px solid var(--akzent);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;
+   box-shadow:0 14px 40px rgba(0,0,0,.35);opacity:0;transform:translateY(-6px);pointer-events:none;
+   transition:opacity .18s,transform .18s}
+ #tipp.an{opacity:1;transform:none;pointer-events:auto}
+ #tipp b{display:block;margin-bottom:3px} #tipp button{margin-top:8px;background:none;border:0;padding:0;
+   color:var(--akzent);font:600 14px system-ui;cursor:pointer}
+ #hilfeknopf{position:fixed;right:20px;bottom:20px;z-index:45;display:flex;align-items:center;gap:8px;border:0;
+   background:var(--akzent);color:var(--akzent-text);font:700 15px system-ui;padding:12px 18px;border-radius:30px;
+   box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer}
+ #hilfeknopf span{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;
+   border:2px solid currentColor;font-size:13px}
+ #hilfeschleier{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .3s;z-index:70}
+ #hilfeschleier.an{opacity:1;pointer-events:auto}
+ #hilfe{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);z-index:71;background:var(--bg);
+   border-left:1px solid var(--linie);box-shadow:-20px 0 60px rgba(0,0,0,.35);overflow-y:auto;
+   padding:22px 20px 40px;transform:translateX(105%);transition:transform .34s cubic-bezier(.2,.8,.2,1)}
+ #hilfe.an{transform:none}
+ #hilfe .kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--grau);margin:0 0 4px}
+ #hilfe h2{font-size:19px;margin:0 0 14px}
+ #hilfe .zu2{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--linie);
+   background:var(--karte);color:var(--text);font-size:17px;cursor:pointer}
+ .kacheln{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .kachel{text-align:left;background:var(--karte);border:1px solid var(--linie);border-radius:12px;padding:12px;
+   color:var(--text);font:inherit;cursor:pointer;transition:border-color .15s,transform .15s}
+ .kachel:hover{border-color:var(--akzent);transform:translateY(-1px)}
+ .kachel .sym{font-size:21px} .kachel b{display:block;margin:4px 0 2px;font-size:14.5px}
+ .kachel span{color:var(--grau);font-size:12.5px;line-height:1.35;display:block}
+ .detail{display:none} #hilfe.thema .detail{display:block} #hilfe.thema .uebersicht{display:none}
+ .zurueck{background:none;border:0;padding:0;margin:0 0 12px;color:var(--akzent);font:600 14px system-ui;cursor:pointer}
+ .detail h3{font-size:18px;margin:0 0 10px;display:flex;gap:8px;align-items:center}
+ .detail p,.detail li{font-size:14.5px;line-height:1.55;margin:0 0 9px} .detail ul{padding-left:18px;margin:0 0 9px}
+ .detail .kasten{background:var(--feld);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:13.5px}
+ .skala{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:6px 0 4px} .skala span{flex:1}
+ .skalatext{display:flex;justify-content:space-between;color:var(--grau);font-size:12px}
+ .weiter{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+ .weiter button{background:var(--karte);border:1px solid var(--linie);border-radius:20px;padding:6px 12px;
+   color:var(--text);font:13px system-ui;cursor:pointer}
+ @media (max-width:700px){
+  #hilfe{top:auto;left:0;width:auto;height:82vh;border-left:0;border-top:1px solid var(--linie);
+    border-radius:18px 18px 0 0;transform:translateY(105%);padding-top:14px}
+  #hilfe:before{content:"";display:block;width:44px;height:5px;border-radius:3px;background:var(--linie);margin:0 auto 12px}
+  #hilfeknopf{right:14px;bottom:14px;padding:11px 16px}
+  .diagramm[data-thema]{padding-top:36px} .diagramm[data-thema] .ik{top:6px;right:8px}
+  .diagramm.gross[data-thema]{padding-top:10px}
+ }
+ @media (prefers-reduced-motion:reduce){#hilfe,#tipp,#hilfeschleier{transition:none}}
+ main{padding-bottom:90px}
+ .kasten2{background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:12px;margin-bottom:12px}
+ .gkoben{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px} .gkoben .chips{margin:0}
+ #gkPlay.an{border-color:var(--akzent);background:var(--karte)}
+ .farbskala{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--grau);margin-left:auto}
+ .farbskala i{width:110px;height:9px;border-radius:5px;background:linear-gradient(90deg,#a50026,#f46d43,#fee08b,#a6d96a,#1a9850,#006837)}
+ .bilder.einzeln{grid-template-columns:1fr;max-width:620px;margin:0 auto}
+ #gkFig{position:relative} #gkBild{transition:opacity .22s ease}
+ .gkdatum{position:absolute;left:18px;top:18px;background:rgba(0,0,0,.68);color:#fff;font:700 15px system-ui;
+   padding:5px 11px;border-radius:6px;pointer-events:none}
+ .gkleer{display:none;position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);width:70%;text-align:center;
+   background:rgba(0,0,0,.72);color:#fff;padding:12px 14px;border-radius:10px;font-size:14px}
+ #gkFig.leer .gkleer{display:block} #gkFig.leer img{opacity:.35}
+ .gross .gkdatum{font-size:20px}
+ .leiste{position:relative;margin:14px 8px 2px;height:46px}
+ .leiste input{position:absolute;left:0;right:0;top:0;width:100%;margin:0;appearance:none;-webkit-appearance:none;background:none;height:24px;z-index:2}
+ .leiste input::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--linie)}
+ .leiste input::-moz-range-track{height:6px;border-radius:3px;background:var(--linie)}
+ .leiste input::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--akzent);
+   margin-top:-9px;border:3px solid var(--karte);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:grab}
+ .leiste input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--akzent);border:3px solid var(--karte)}
+ .raster{position:absolute;left:-10px;right:-10px;top:26px;display:flex;justify-content:space-between;font-size:12px;color:var(--grau)}
+ .raster span{width:44px;display:flex;flex-direction:column;align-items:center;white-space:nowrap;cursor:pointer}
+ .raster span:before{content:"";width:2px;height:7px;background:var(--linie);margin-bottom:2px}
+ .raster span.an{color:var(--text);font-weight:700} .raster span.fehlt{opacity:.4;text-decoration:line-through}
+ .tabelle{overflow-x:auto;padding:0}
+ table.ff{border-collapse:separate;border-spacing:3px;font-size:12.5px;min-width:640px;width:100%}
+ table.ff th{font-weight:600;color:var(--grau);padding:6px 4px;text-align:center;white-space:nowrap}
+ table.ff th.f{text-align:left;color:var(--text);position:sticky;left:0;background:var(--karte);z-index:1;max-width:190px;
+   overflow:hidden;text-overflow:ellipsis}
+ table.ff td{border-radius:5px;padding:6px 3px;text-align:center;color:#1d1d1b;white-space:nowrap}
+ table.ff td.unsicher{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.35) 0 4px,transparent 4px 8px)}
+ #berWahl{width:auto;min-width:220px;flex:none;margin-bottom:10px}
+ .bertext{white-space:pre-wrap;font-size:14px;line-height:1.55}
+ .bertext b{font-weight:700}
+ @media (max-width:700px){.raster{font-size:10.5px} .farbskala{margin-left:0} .gkdatum{font-size:12px;left:10px;top:10px;padding:3px 8px}}
+</style></head><body><main>
+<h1>Revier Hohenweiden · Jahresverlauf</h1><div class="unter" id="stand">lädt …</div>
+<div class="wahl"><select id="flaeche"></select><select id="jahr"></select></div>
+<div class="info" data-thema="kultur"><b id="kultur">–</b><br><span id="merkmale"></span></div>
+<div class="diagramm" data-thema="ndvi"><div class="dkopf" id="tNdvi"></div><div class="chips" id="chNdvi"></div><div class="flaeche"><canvas id="cNdvi"></canvas></div></div>
+<p class="hinweis">Punkte = einzelne Satellitenaufnahmen, Linie = geglätteter Verlauf (Lücken = keine wolkenfreie
+Aufnahme). Graues Band = Spanne vergleichbarer Jahre (<span id="bandtext"></span>), gestrichelt deren Mitte.
+▲ = gemeldetes Ereignis.</p>
+<div class="diagramm klein" id="radarbox" data-thema="radar"><div class="dkopf">Radar-Echo im Vergleich zum Wald (dB)</div><div class="chips" id="chRadar"></div><div class="flaeche"><canvas id="cRadar"></canvas></div></div>
+<p class="hinweis" id="radartext">Radar (Sentinel-1, etwa alle 3 Tage, auch bei Wolken): Stärke des Radar-Echos vom Feld im
+Vergleich zum Wald. Hoher Wert = dichter, hoher Bestand; ein plötzlicher Abfall = Bestand entfernt (Ernte).
+Schwankungen von 1–2 dB sind normal (Regen, Tau).</p>
+<div class="diagramm klein" data-thema="wetter"><div class="dkopf">Regen und Wasserbilanz</div><div class="chips" id="chRegen"></div><div class="flaeche"><canvas id="cRegen"></canvas></div></div>
+<p class="hinweis">Balken = Regen je Woche in Litern pro Quadratmeter (1 l/m² = 1 mm), gestrichelt = Wochenmittel aller
+Jahre. Braune Linie (rechte Achse) = Wasserbilanz seit 1. März aufsummiert (Regen minus Verdunstung); je tiefer, desto
+trockener. Die Schaltflächen über einem Diagramm zeigen nur die gewählte Reihe; Diagramme und Karten lassen sich durch Anklicken vergrößern, ⓘ erklärt sie.</p>
+<h2 class="abschnitt" data-thema="warnstufen">Gemeldete Ereignisse</h2>
+<ul class="er" id="ereignisse"></ul>
+<h2 class="abschnitt" data-thema="gruenkarte">Grünkarte · Monat für Monat</h2>
+<div class="kasten2" id="gkBox">
+ <div class="gkoben"><div class="chips fokus" id="gkJahre"></div>
+  <button class="chip" id="gkPlay" aria-pressed="false">▶ Abspielen</button>
+  <span class="farbskala">kahl <i></i> dicht grün</span></div>
+ <div class="bilder einzeln"><figure id="gkFig"><img id="gkBild" alt="Grünkarte">
+  <div class="gkdatum" id="gkDatum"></div><div class="gkleer" id="gkLeer">In diesem Monat gab es keine
+  ausreichend wolkenfreie Aufnahme.</div><figcaption id="gkCap"></figcaption></figure></div>
+ <div class="leiste"><input type="range" id="gkSchieber" min="0" max="8" step="1" value="4"
+  aria-label="Monat wählen"><div class="raster" id="gkRaster"></div></div>
+</div>
+<h2 class="abschnitt" data-thema="karten">Weitere Karten</h2>
+<div class="bilder">
+ <figure data-thema="deckung"><img src="deckung.jpg" alt="Deckungskarte" onerror="this.parentNode.style.display='none'">
+  <figcaption>Letzte Deckungskarte</figcaption></figure>
+ <figure data-thema="radarkarte" id="radarFig"><img src="radar_aktuell.jpg" alt="Radarkarte" onerror="this.parentNode.style.display='none'">
+  <figcaption id="radarCap">Radarkarte</figcaption></figure>
+ <figure data-thema="flaechen"><img src="orientierung.jpg" alt="Orientierungskarte" onerror="this.parentNode.style.display='none'">
+  <figcaption>Orientierungskarte</figcaption></figure>
+ <figure data-thema="schwerpunkte" id="schwerFig"><img src="schwerpunkte.jpg" alt="Verdachtsstellen aller Jahre" onerror="this.parentNode.style.display='none'">
+  <figcaption id="schwerCap">Verdachtsstellen aller Jahre</figcaption></figure>
+ <figure data-thema="bericht" id="waldFig"><img src="wald.jpg" alt="Waldkarte" onerror="this.parentNode.style.display='none'">
+  <figcaption id="waldCap">Waldkarte aus dem Quartalsbericht</figcaption></figure>
+</div>
+<h2 class="abschnitt" data-thema="fruchtfolge">Fruchtfolge</h2>
+<div class="kasten2 tabelle"><table class="ff" id="ff"></table></div>
+<p class="hinweis" id="ffHinweis"></p>
+<h2 class="abschnitt" data-thema="bericht">Quartalsbericht</h2>
+<div class="kasten2"><select id="berWahl" aria-label="Bericht wählen"></select><div class="bertext" id="berText"></div></div>
+<p class="hinweis" style="margin-top:18px">Datenquellen: Copernicus Sentinel-2 und Sentinel-1 (ESA, über Element 84 und
+Microsoft Planetary Computer), Wetter: Deutscher Wetterdienst (über Bright Sky), Luftbild: DOP20 © GeoBasis-DE /
+LVermGeo ST, dl-de/by-2-0. Kultur und Ereignisse sind automatisch aus Satellitendaten geschätzt.</p>
+<button id="hilfeknopf" aria-haspopup="dialog"><span>?</span>Erklärungen</button>
+<div id="hilfeschleier"></div>
+<div id="tipp" role="tooltip"></div>
+<aside id="hilfe" role="dialog" aria-label="Erklärungen" aria-hidden="true">
+ <button class="zu2" aria-label="Schließen">✕</button>
+ <div class="uebersicht"><p class="kicker">Erklärungen</p><h2>Was bedeutet was?</h2><div class="kacheln" id="kacheln"></div></div>
+ <div class="detail" id="detail"></div>
+</aside>
+</main><script>
+Chart.defaults.font.size = 13;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const MONATE = [[60,"März"],[91,"April"],[121,"Mai"],[152,"Juni"],[182,"Juli"],[213,"Aug."],[244,"Sept."],[274,"Okt."],[305,"Nov."]];
+const datum = t => { const d = new Date(2023,0,t); return d.getDate()+"."+(d.getMonth()+1)+"."; };
+const xy = (a,i) => a.map(p => ({x:p[0], y:p[i]}));
+let D, dia = {}, auswahl = {};
+// Legende als Schaltflaechen: Klick zeigt nur diese Reihe, erneuter Klick zeigt wieder alles
+function schaltflaechen(key, ch, eintraege){
+  const box = document.getElementById("ch" + key);
+  if (!ch || eintraege.length < 2) { box.innerHTML = ""; return; }
+  box.innerHTML = eintraege.map((e,i) => `<button class="chip" data-i="${i}" aria-pressed="false">` +
+    `<i class="${e.art||""}" style="background:${e.farbe};border-color:${e.farbe}"></i>${e.name}<span class="x">✕</span></button>`).join("");
+  function anwenden(aktiv, weich){
+    auswahl[key] = aktiv;
+    box.classList.toggle("fokus", aktiv !== null);
+    box.querySelectorAll(".chip").forEach((c,k) => { c.classList.toggle("an", k === aktiv); c.setAttribute("aria-pressed", k === aktiv); });
+    ch.data.datasets.forEach((d,k) => ch.setDatasetVisibility(k, aktiv === null || eintraege[aktiv].sets.includes(k)));
+    Object.keys(ch.options.scales).forEach(a => { if (a !== "x")
+      ch.options.scales[a].display = aktiv === null || (eintraege[aktiv].achse || "y") === a; });
+    ch.update(weich ? undefined : "none");
+  }
+  box.onclick = ev => {
+    const b = ev.target.closest(".chip"); if (!b) return;
+    ev.stopPropagation();                              // nicht gleichzeitig vergroessern
+    const i = +b.dataset.i; anwenden(auswahl[key] === i ? null : i, true);
+  };
+  ch.options.animation = {duration:420, easing:"easeOutQuart"};
+  const vorher = auswahl[key];
+  if (vorher !== null && vorher !== undefined && vorher < eintraege.length) anwenden(vorher, false);
+  else auswahl[key] = null;
+}
+const xAchse = () => ({type:"linear", min:60, max:310, offset:false,
+  afterBuildTicks: a => a.ticks = MONATE.map(m => ({value:m[0]})),
+  ticks:{color:css("--grau"), maxRotation:0, autoSkip:true, autoSkipPadding:6,
+         callback: v => (MONATE.find(m => m[0]===v)||[0,""])[1]},
+  grid:{color:css("--linie")}});
+function zeichnen(){
+  const f = D.flaechen[+document.getElementById("flaeche").value];
+  const jahr = document.getElementById("jahr").value, j = f.jahre[jahr];
+  document.getElementById("kultur").textContent = f.typ==="wald" ? "Wald" :
+     j.kultur + (j.sicherheit && j.sicherheit!=="sicher" ? "  (Sicherheit: "+j.sicherheit+")" : "");
+  document.getElementById("merkmale").textContent = (j.merkmale||"") +
+     (!D.kultur_bestaetigt && f.typ!=="wald" ? "  ·  Kultur geschätzt, noch nicht vor Ort bestätigt" : "");
+  document.getElementById("bandtext").textContent = j.band_text;
+  const er = D.ereignisse.filter(e => e.flaeche===f.name && String(e.jahr)===jahr);
+  const sets = [
+    {label:"Minimum", data:xy(j.band,1), borderWidth:0, pointRadius:0, fill:false},
+    {label:"Maximum", data:xy(j.band,3), borderWidth:0, pointRadius:0, fill:"-1", backgroundColor:css("--band")+"40"},
+    {label:"Mitte Vergleichsjahre", data:xy(j.band,2), borderColor:css("--band"), borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false},
+    {label:"NDVI "+jahr, data:xy(j.glatt,1), borderColor:css("--ndvi"), borderWidth:2.5, pointRadius:0, tension:.3, spanGaps:false},
+    {label:"Aufnahme", data:xy(j.punkte,1), showLine:false, pointRadius:3.5, pointBackgroundColor:css("--ndvi"), borderColor:css("--ndvi")},
+    {label:"Ereignis", data:er.map(e => ({x:e.tag, y:0.97, text:e.symbol+" "+e.datum+": "+e.text})), showLine:false,
+     pointStyle:"triangle", rotation:180, pointRadius:9, pointBackgroundColor:"#e53935", borderColor:"#e53935"}];
+  if (f.typ==="wald" && j.feuchte){
+    sets.push({label:"Feuchte-Index "+jahr, data:xy(j.feuchte_glatt,1), borderColor:css("--feuchte"), borderWidth:2, pointRadius:0, tension:.3},
+      {label:"Feuchte-Aufnahme", data:xy(j.feuchte,1), showLine:false, pointRadius:3, pointBackgroundColor:css("--feuchte"), borderColor:css("--feuchte")},
+      {label:"Feuchte Mitte Vergleichsjahre", data:xy(j.feuchte_band,2), borderColor:css("--feuchte"), borderDash:[5,4], borderWidth:1, pointRadius:0});
+  }
+  document.getElementById("tNdvi").textContent = "["+f.nr+"] "+f.name+" · Grün-Index (NDVI) "+jahr;
+  if (dia.n) dia.n.destroy();
+  dia.n = new Chart(document.getElementById("cNdvi"), {type:"line", data:{datasets:sets},
+    options:{maintainAspectRatio:false, animation:false, interaction:{mode:"nearest", intersect:false},
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{title: i => datum(i[0].parsed.x)+jahr,
+          label: i => i.raw.text ? i.raw.text.slice(0,160) : i.dataset.label+": "+(+i.parsed.y).toFixed(2)}}},
+      scales:{x:xAchse(), y:{min:0, max:1, ticks:{color:css("--grau")}, grid:{color:css("--linie")}}}}});
+  const hatRadar = j.radar && j.radar.length > 0;
+  document.getElementById("radarbox").style.display = document.getElementById("radartext").style.display = hatRadar ? "" : "none";
+  if (dia.s) { dia.s.destroy(); dia.s = null; }
+  if (hatRadar) dia.s = new Chart(document.getElementById("cRadar"), {type:"line", data:{datasets:[
+      {label:"Radar-Echo "+jahr+" (geglättet)", data:xy(j.radar_glatt,1), borderColor:css("--radar"), borderWidth:2.5, pointRadius:0, tension:.3},
+      {label:"Aufnahme", data:xy(j.radar,1), showLine:false, pointRadius:2.5, pointBackgroundColor:css("--radar"), borderColor:css("--radar")}]},
+    options:{maintainAspectRatio:false, animation:false, interaction:{mode:"nearest", intersect:false},
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{title: i => datum(i[0].parsed.x)+jahr, label: i => (+i.parsed.y).toFixed(1)+" dB"}}},
+      scales:{x:xAchse(), y:{ticks:{color:css("--grau")}, grid:{color:css("--linie")}, title:{display:true,text:"dB",color:css("--grau")}}}}});
+  const w = D.wetter[jahr] || {regen:[], bilanz:[]};
+  if (dia.r) dia.r.destroy();
+  dia.r = new Chart(document.getElementById("cRegen"), {data:{datasets:[
+      {type:"bar", label:"Regen je Woche (l/m²)", data:xy(w.regen,1), backgroundColor:css("--regen"), maxBarThickness:9, barPercentage:0.8, categoryPercentage:1, yAxisID:"y"},
+      {type:"line", label:"Wochenmittel aller Jahre", data:xy(D.regen_mittel,1), borderColor:css("--band"), borderDash:[5,4], borderWidth:1.5, pointRadius:0, yAxisID:"y"},
+      {type:"line", label:"Wasserbilanz seit 1. März (l/m²)", data:xy(w.bilanz,1), borderColor:css("--bilanz"), borderWidth:2, pointRadius:0, yAxisID:"y2"}]},
+    options:{maintainAspectRatio:false, animation:false, interaction:{mode:"nearest", intersect:false},
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{title: i => "Woche um den "+datum(i[0].parsed.x)+jahr,
+          label: i => i.dataset.label.replace(" (l/m²)","")+": "+(+i.parsed.y).toFixed(0)+" l/m²"}}},
+      scales:{x:xAchse(), y:{min:0, title:{display:true,text:"Regen in l/m² je Woche",color:css("--grau")}, ticks:{color:css("--grau")}, grid:{color:css("--linie")}},
+        y2:{position:"right", title:{display:true,text:"Wasserbilanz in l/m²",color:css("--grau")}, ticks:{color:css("--grau")}, grid:{display:false}}}}});
+  const nEintr = [{name:"NDVI "+jahr, farbe:css("--ndvi"), art:"strich", sets:[3,4]},
+    {name:"Spanne Vergleichsjahre", farbe:css("--band")+"80", sets:[0,1]},
+    {name:"Mitte Vergleichsjahre", farbe:css("--band"), art:"gestr", sets:[2]}];
+  if (er.length) nEintr.push({name:"Ereignisse", art:"dreieck", farbe:"#e53935", sets:[5]});
+  if (f.typ==="wald" && j.feuchte) nEintr.push({name:"Feuchte-Index "+jahr, farbe:css("--feuchte"), art:"strich", sets:[6,7]},
+    {name:"Feuchte Mitte Vergleichsjahre", farbe:css("--feuchte"), art:"gestr", sets:[8]});
+  schaltflaechen("Ndvi", dia.n, nEintr);
+  schaltflaechen("Radar", dia.s, [{name:"Verlauf (geglättet)", farbe:css("--radar"), art:"strich", sets:[0]},
+    {name:"Einzelne Aufnahmen", farbe:css("--radar"), sets:[1]}]);
+  schaltflaechen("Regen", dia.r, [{name:"Regen je Woche", farbe:css("--regen"), sets:[0], achse:"y"},
+    {name:"Wochenmittel aller Jahre", farbe:css("--band"), art:"gestr", sets:[1], achse:"y"},
+    {name:"Wasserbilanz seit 1. März", farbe:css("--bilanz"), art:"strich", sets:[2], achse:"y2"}]);
+  document.getElementById("ereignisse").innerHTML = er.map(e =>
+    "<li>"+e.symbol+" <b>"+e.datum+"</b> – "+e.text.replace(/</g,"&lt;")+"</li>").join("");
+}
+fetch("revier.json", {cache:"no-cache"}).then(r => { if(!r.ok) throw 0; return r.json(); }).then(d => {
+  D = d;
+  document.getElementById("stand").textContent = "Datenstand " + d.stand;
+  const fs = document.getElementById("flaeche"), js = document.getElementById("jahr");
+  d.flaechen.forEach((f,i) => fs.add(new Option("["+f.nr+"] "+f.name, i)));
+  d.jahre.slice().reverse().forEach(j => js.add(new Option(j, j)));
+  let merk = {}; try { merk = JSON.parse(localStorage.getItem("revier")||"{}"); } catch(e){}
+  if (merk.f < d.flaechen.length) fs.value = merk.f;
+  if (d.jahre.includes(+merk.j)) js.value = merk.j;
+  const neu = () => { try { localStorage.setItem("revier", JSON.stringify({f:fs.value, j:js.value})); } catch(e){} zeichnen(); };
+  fs.onchange = js.onchange = neu; zeichnen();
+  try { kartenteil(d); } catch(err) { console.log(err); }
+}).catch(() => document.getElementById("stand").textContent =
+  "Noch keine Daten – auf dem Pi einmal 'venv/bin/python programme/web_daten.py' im Ordner ~/projekte/ndvi ausführen.");
+
+// ---- Gruenkarte, Fruchtfolge, Quartalsbericht
+function kartenteil(d){
+  const K = d.karten || {}, gruen = K.gruen || {};
+  // Versionsnummer an die Bilder haengen, damit der Browser keine alten Karten aus dem Speicher zeigt
+  const V = d.version || d.stand || "";
+  document.querySelectorAll(".bilder img").forEach(img => { const a = img.getAttribute("src");
+    if (a && !a.includes("?") && !a.startsWith("gruen/")) img.src = a + "?v=" + V; });
+  const MN = ["März","April","Mai","Juni","Juli","August","September","Oktober","November"];
+  const MK = ["März","Apr.","Mai","Juni","Juli","Aug.","Sept.","Okt.","Nov."];
+  const jahre = [...new Set(Object.keys(gruen).map(k => k.slice(0,4)))].sort();
+  const box = document.getElementById("gkBox");
+  if (!jahre.length) { box.innerHTML = '<p class="hinweis">Noch keine Grünkarten vorhanden.</p>'; }
+  else {
+    const bild = document.getElementById("gkBild"), fig = document.getElementById("gkFig"),
+          schieber = document.getElementById("gkSchieber"), raster = document.getElementById("gkRaster"),
+          jb = document.getElementById("gkJahre"), play = document.getElementById("gkPlay");
+    let jahr = jahre[jahre.length - 1], lauf = null;
+    raster.innerHTML = MK.map((m,i) => `<span data-i="${i}">${m}</span>`).join("");
+    jb.innerHTML = jahre.map(j => `<button class="chip" data-j="${j}">${j}</button>`).join("");
+    const schluessel = i => `${jahr}-${String(i + 3).padStart(2,"0")}`;
+    function zeigen(i, weich){
+      const k = schluessel(i), da = !!gruen[k];
+      raster.querySelectorAll("span").forEach((s,n) => { s.classList.toggle("an", n === i);
+        s.classList.toggle("fehlt", !gruen[schluessel(n)]); });
+      jb.querySelectorAll(".chip").forEach(c => c.classList.toggle("an", c.dataset.j === jahr));
+      document.getElementById("gkDatum").textContent = MN[i] + " " + jahr;
+      fig.classList.toggle("leer", !da);
+      document.getElementById("gkCap").textContent = da ? `Monatsbild aus ${gruen[k].aufnahmen} Aufnahme${gruen[k].aufnahmen > 1 ? "n" : ""}` +
+        (gruen[k].sicht < 0.95 ? `, ${Math.round(gruen[k].sicht * 100)} % der Flächen sichtbar (weiß = Wolken)` : "") : "keine Aufnahme";
+      if (!da) return;
+      const neu = "gruen/" + k + ".jpg?v=" + V;
+      if (bild.getAttribute("src") === neu) return;
+      if (!weich) { bild.src = neu; return; }
+      bild.style.opacity = 0;
+      setTimeout(() => { bild.onload = () => bild.style.opacity = 1; bild.src = neu; }, 200);
+    }
+    // letzter Monat mit Bild im neuesten Jahr
+    let start = 0; for (let i = 0; i < 9; i++) if (gruen[schluessel(i)]) start = i;
+    schieber.value = start; zeigen(start, false);
+    schieber.oninput = () => zeigen(+schieber.value, true);
+    raster.onclick = ev => { const s = ev.target.closest("span"); if (s) { schieber.value = s.dataset.i; zeigen(+s.dataset.i, true); } };
+    jb.onclick = ev => { const c = ev.target.closest(".chip"); if (!c) return; jahr = c.dataset.j; zeigen(+schieber.value, true); };
+    function stopp(){ clearInterval(lauf); lauf = null; play.textContent = "▶ Abspielen"; play.classList.remove("an"); play.setAttribute("aria-pressed","false"); }
+    play.onclick = () => {
+      if (lauf) return stopp();
+      play.textContent = "■ Anhalten"; play.classList.add("an"); play.setAttribute("aria-pressed","true");
+      let i = -1;
+      const schritt = () => { i++; while (i < 9 && !gruen[schluessel(i)]) i++;
+        if (i >= 9) return stopp(); schieber.value = i; zeigen(i, true); };
+      schritt(); lauf = setInterval(schritt, 1300);
+    };
+  }
+  if (K.radar) document.getElementById("radarCap").textContent = "Radarkarte · Aufnahmen vom " + K.radar.tage.join(" und ");
+  if (K.schwerpunkte) { const S = K.schwerpunkte;
+    document.getElementById("schwerCap").textContent = `Wildschaden-Verdacht ${S.von}–${S.bis}: gelb 1 Jahr, orange 2, rot 3+ Jahre · ` +
+      (S.felder.length ? `Schwerpunkt: ${S.felder.join(", ")}` : "keine echten Schwerpunkte (Verteilung wie Zufall)"); }
+  if (K.wald) document.getElementById("waldCap").textContent = "Waldkarte · Quartalsbericht " + K.wald.replace("-Q2"," Frühling").replace("-Q3"," Sommer");
+  // Fruchtfolge
+  const FARBE = [["Winterraps","#f2d22e","Raps"],["Wintergetreide","#d9b26f","Getreide"],["Mais oder Rübe","#9ccc65","Mais/Rübe"],
+    ["Mais","#66bb6a","Mais"],["Zuckerrübe","#b39ddb","Rübe"],["frühe Sommerung","#f5e3a3","Sommerung"],
+    ["Sommerkultur","#c5e1a5","Sommer"],["Brache","#bdbdbd","Brache"]];
+  const ff = d.fruchtfolge || [], jj = d.jahre || [];
+  if (ff.length) {
+    document.getElementById("ff").innerHTML = "<tr><th class='f'>Feld</th>" + jj.map(j => `<th>${j}</th>`).join("") + "</tr>" +
+      ff.map(f => `<tr><th class="f" title="${f.name}">[${f.nr}] ${f.name}</th>` + jj.map(j => {
+        const [k, sich] = f.jahre[j] || ["–","–"], t = FARBE.find(x => k.startsWith(x[0]));
+        const unsicher = sich === "niedrig" || sich === "–";
+        return `<td class="${unsicher ? "unsicher" : ""}" style="background:${t ? t[1] : "var(--chip)"};${t ? "" : "color:var(--grau)"}"
+          title="${j}: ${k} (Sicherheit: ${sich})">${t ? t[2] : "?"}${unsicher && t ? "?" : ""}</td>`; }).join("") + "</tr>").join("");
+    document.getElementById("ffHinweis").textContent = "Aus dem Grünverlauf geschätzt. Gestreift mit „?“ = unsicher. " +
+      (d.kultur_bestaetigt ? "" : "Noch nicht mit dem tatsächlichen Anbau abgeglichen. ") + "Fahre über ein Feld (oder tippe) für Details.";
+  }
+  // Quartalsbericht
+  const ber = d.berichte || [], wahl = document.getElementById("berWahl"), text = document.getElementById("berText");
+  const schoen = n => n.replace(/(\d{4})-Q2/, "Frühling $1 (April–Juni)").replace(/(\d{4})-Q3/, "Sommer $1 (Juli–September)");
+  if (!ber.length) { wahl.style.display = "none"; text.textContent = "Noch kein Bericht vorhanden. Er erscheint jeweils am 1. Juli und 1. Oktober."; }
+  else {
+    ber.forEach((b,i) => wahl.add(new Option(schoen(b.name), i)));
+    const zeig = () => { const t = ber[+wahl.value].text.split("\n").slice(2).join("\n");
+      text.innerHTML = t.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"})[c])
+        .replace(/^(🌦 WETTER.*|🌾 FELDER.*|🌲 WALD.*)$/gm, "<b>$1</b>"); };
+    wahl.onchange = zeig; zeig();
+  }
+}
+
+// ---- Anklicken vergroessert Diagramm oder Karte, der Rest wird abgedunkelt
+(function(){
+  const schleier = document.createElement("div"); schleier.id = "schleier"; document.body.appendChild(schleier);
+  const hinweis = document.createElement("div"); hinweis.id = "querhinweis";
+  hinweis.textContent = "Tipp: Handy quer drehen für mehr Platz"; document.body.appendChild(hinweis);
+  const ruhig = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const kurve = "cubic-bezier(.2,.8,.2,1)";
+  let offen = null, platz = null;
+  const versatz = (von, zu) => `translate(${von.left-zu.left}px,${von.top-zu.top}px) scale(${von.width/zu.width},${von.height/zu.height})`;
+  // Schriftgroessen der Diagramme: normal / vergroessert
+  function schrift(el, gross){
+    const c = el.querySelector("canvas"), ch = c && window.Chart ? Chart.getChart(c) : null;
+    if (!ch) return;
+    // Schrift passend zur Breite: am Handy klein bleiben, am PC gross
+    Chart.defaults.font.size = gross ? Math.round(Math.max(11, Math.min(20, el.clientWidth / 60))) : 13;
+    ch.resize(); ch.update("none");
+  }
+  // Diagramme am Handy im Hochformat: nicht hoeher als breit, damit nichts gequetscht wirkt
+  const hochformat = () => innerWidth < 700 && innerHeight > innerWidth;
+  function diagrammass(el){
+    if (!hochformat()) { ["left","top","width","height","padding"].forEach(k => el.style.removeProperty(k)); return; }
+    const b = innerWidth * 0.96, h = Math.min(innerHeight * 0.75, b * 1.05), oben = (innerHeight - h) / 2;
+    const setze = (k, v) => el.style.setProperty(k, v, "important");
+    setze("width", b + "px"); setze("height", h + "px"); setze("left", (innerWidth - b) / 2 + "px");
+    setze("top", oben + "px"); setze("padding", "10px");
+    hinweis.style.top = (oben + h + 14) + "px";
+  }
+  // Karten: Fenster genau so gross wie das Bild (kein weisser Rand)
+  function kartenmass(el){
+    const img = el.querySelector("img");
+    if (!img || !img.naturalWidth) return;
+    const maxB = innerWidth * 0.97, maxH = innerHeight * 0.95, rand = 8;
+    const f = Math.min((maxB - rand) / img.naturalWidth, (maxH - rand) / img.naturalHeight);
+    const b = img.naturalWidth * f + rand, h = img.naturalHeight * f + rand;
+    Object.assign(el.style, {width: b + "px", height: h + "px", left: (innerWidth - b) / 2 + "px", top: (innerHeight - h) / 2 + "px"});
+  }
+  function gross(el){
+    if (offen) return;
+    const alt = el.getBoundingClientRect();
+    platz = document.createElement("div");
+    platz.style.height = alt.height + "px"; platz.style.marginBottom = getComputedStyle(el).marginBottom;
+    el.before(platz); el.classList.add("gross"); offen = el; schleier.classList.add("an");
+    if (el.tagName === "FIGURE") kartenmass(el); else { diagrammass(el); schrift(el, true); }
+    hinweis.classList.toggle("an", el.tagName !== "FIGURE" && hochformat());
+    if (!ruhig) el.animate([{transform: versatz(alt, el.getBoundingClientRect())}, {transform:"none"}], {duration:340, easing:kurve});
+  }
+  function klein(){
+    if (!offen) return;
+    const el = offen, fertig = () => { el.classList.remove("gross"); el.removeAttribute("style");
+      platz.remove(); platz = null; if (el.tagName !== "FIGURE") schrift(el, false); };
+    offen = null; schleier.classList.remove("an"); hinweis.classList.remove("an");
+    if (ruhig) return fertig();
+    el.animate([{transform:"none"}, {transform: versatz(platz.getBoundingClientRect(), el.getBoundingClientRect())}],
+               {duration:260, easing:kurve}).onfinish = fertig;
+  }
+  document.querySelectorAll(".diagramm, .bilder figure").forEach(el => {
+    el.classList.add("zoombar");
+    const zu = document.createElement("div"); zu.className = "zu"; zu.textContent = "✕"; zu.title = "Schließen";
+    zu.addEventListener("click", e => { e.stopPropagation(); klein(); });
+    el.appendChild(zu);
+    el.addEventListener("click", () => { if (el !== offen) gross(el); });
+  });
+  schleier.addEventListener("click", klein);
+  addEventListener("resize", () => {
+    if (!offen) return;
+    if (offen.tagName === "FIGURE") return kartenmass(offen);
+    diagrammass(offen); schrift(offen, true); hinweis.classList.toggle("an", hochformat());
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") klein(); });
+})();
+
+// ---- Hilfe: Themen, i-Knoepfe, Erklaer-Bereich
+(function(){
+const T = {
+ ndvi: {sym:"🌿", titel:"Grün-Index (NDVI)", kurz:"Wie grün und dicht ein Bestand ist",
+  tipp:"Zeigt, wie viel lebendes Grün auf der Fläche steht: 0 = kahl, 1 = sehr dicht. Punkte sind Satellitenaufnahmen, die Linie ist geglättet, das graue Band zeigt die übliche Spanne anderer Jahre.",
+  text:`<p>Der Satellit <b>Sentinel-2</b> fotografiert das Revier etwa alle 2–5 Tage. Gesunde Pflanzen werfen viel <b>nahes Infrarot</b> zurück und schlucken <b>rotes Licht</b>. Aus dem Verhältnis entsteht der NDVI zwischen 0 und 1.</p>
+   <div class="skala"><span style="background:#a0522d"></span><span style="background:#d9b44a"></span><span style="background:#b9d77a"></span><span style="background:#4caf50"></span><span style="background:#1b5e20"></span></div>
+   <div class="skalatext"><span>0,1–0,2 offener Boden</span><span>0,3 reif/Stoppel</span><span>0,8+ dicht</span></div>
+   <p style="margin-top:12px"><b>So liest du das Diagramm:</b></p>
+   <ul><li><b>Punkte</b> = einzelne wolkenfreie Aufnahmen</li><li><b>Linie</b> = geglätteter Verlauf. Lücken bedeuten: wochenlang Wolken, keine Messung.</li>
+   <li><b>Graues Band</b> = was in anderen Jahren mit derselben Kultur üblich war, gestrichelt die Mitte</li><li><b>▼ rot</b> = an diesem Tag wurde ein Ereignis gemeldet</li></ul>
+   <div class="kasten">Typischer Verlauf: Wintergetreide ist schon im März grün, reift im Juni/Juli ab (Kurve fällt) und wird geerntet. Mais startet erst im Mai und bleibt bis September grün.</div>`},
+ radar: {sym:"📡", titel:"Radar", kurz:"Sieht auch durch Wolken",
+  tipp:"Radar-Echo des Feldes, etwa alle 3 Tage – auch bei Wolken und nachts. Hoch = dichter Bestand. Ein plötzlicher Abfall bedeutet meist: geerntet.",
+  text:`<p>Der Satellit <b>Sentinel-1</b> sendet Radarwellen und misst, wie stark sie zurückkommen. Das funktioniert <b>bei Wolken, Regen und nachts</b> – genau dann, wenn der Grün-Index blind ist.</p>
+   <p>Ein hoher, dichter Bestand streut viel zurück. Wird er geerntet, <b>fällt das Echo deutlich ab</b>. Die Kurve ist auf den Wald bezogen, dadurch fallen Wettereinflüsse weitgehend heraus.</p>
+   <div class="kasten"><b>Wie zuverlässig?</b> An den Jahren 2017–2026 geprüft: Rapsernte fast immer erkannt (auf 3–6 Tage genau), Getreide und Mais etwa jede zweite Ernte. Eine Radar-Meldung ist also ein starker Hinweis – keine Meldung beweist nichts.</div>
+   <p>Schwankungen von 1–2 dB sind normal (Regen, Tau, Bodenfeuchte).</p>`},
+ wetter: {sym:"🌧️", titel:"Wetter & Wasserbilanz", kurz:"Regen, Trockenheit, Unwetter",
+  tipp:"Blaue Balken = Regen je Woche in l/m². Die braune Linie ist die Wasserbilanz seit 1. März: je tiefer, desto trockener ist der Boden.",
+  text:`<p>Die Werte stammen von der <b>DWD-Station Bad Lauchstädt</b> (4 km entfernt).</p>
+   <ul><li><b>Balken</b> = Regen je Woche (1 l/m² = 1 mm)</li><li><b>Gestrichelt</b> = Wochenmittel aller Jahre seit 2017</li>
+   <li><b>Braune Linie</b> = Wasserbilanz: Regen minus Verdunstung, aufsummiert seit 1. März. Fällt sie stark, trocknet der Boden aus.</li></ul>
+   <div class="kasten">Das Wetter fließt auch in die Meldungen ein: Liegt ein Feld unter dem üblichen Grün und war es trocken, ist Trockenstress wahrscheinlich. Gab es Sturm oder Starkregen, kann ein Einbruch Lager sein statt Wildschaden.</div>`},
+ kultur: {sym:"🌾", titel:"Kultur", kurz:"Was auf dem Feld steht",
+  tipp:"Die Kultur wird aus dem Jahresverlauf geschätzt, z. B. Raps an der gelben Blüte im Mai, Mais am späten Grün. Die Sicherheit steht dabei.",
+  text:`<p>Welche Pflanze auf einem Feld steht, wird aus dem <b>Jahresverlauf des Grün-Index</b> geschätzt:</p>
+   <ul><li><b>Winterraps</b>: früh grün, im Mai kurze Delle durch die gelbe Blüte</li><li><b>Wintergetreide</b>: früh grün, Abreife im Juni/Juli</li>
+   <li><b>Mais</b>: im April noch offen, ab Juni dicht, Ernte ab September</li><li><b>Zuckerrübe</b>: wie Mais, aber bis in den Oktober grün</li></ul>
+   <div class="kasten">Gerste und Weizen lassen sich vom Satelliten nicht sicher trennen. Alle Angaben sind Schätzungen und werden noch mit dem tatsächlichen Anbau abgeglichen.</div>`},
+ deckung: {sym:"🦌", titel:"Deckungskarte", kurz:"Wo das Wild Deckung findet",
+  tipp:"Zeigt für jede Fläche, ob dort gerade hoher Bestand (Deckung), niedriger Bestand (Äsung) oder offener Boden ist. Wird monatlich neu erstellt.",
+  text:`<p>Die Karte wird am <b>1. jedes Monats</b> (März–November) neu erstellt und zeigt den aktuellen Zustand jeder Fläche:</p>
+   <ul><li><b>🟩 hohe Deckung</b> – dichter, hoher Bestand</li><li><b>🟨 reif</b> – abreifend, steht vermutlich noch</li>
+   <li><b>🟢 niedriger Bestand</b> und <b>🌱 Neuansaat</b> – Äsung, kaum Deckung</li><li><b>🟫 offen/Stoppel</b> – keine Deckung</li></ul>
+   <div class="kasten">Ob reifes Getreide noch steht oder schon gedroschen ist, kann der Satellit nicht sicher unterscheiden. In den ersten drei Wochen nach der Abreife gilt es als „steht vermutlich noch“.</div>`},
+ flaechen: {sym:"🗺️", titel:"Flächen & Karte", kurz:"Nummern, Namen, Lage",
+  tipp:"Die Flächen sind von Nord nach Süd nummeriert. Die Nummern findest du in der Auswahl oben und in allen Meldungen wieder.",
+  text:`<p>Das Revier ist in <b>zehn Flächen</b> aufgeteilt, nummeriert von <b>Nord nach Süd</b>. Die Nummer steht in der Auswahl oben, auf allen Karten und in jeder Meldung.</p>
+   <p>Hintergrund ist das amtliche Luftbild (DOP20) des Landes Sachsen-Anhalt. Es wird einmal im Quartal aktualisiert.</p>
+   <div class="kasten"><b>Bedienung:</b> Die Schaltflächen über jedem Diagramm zeigen nur die gewählte Reihe, ein zweiter Klick zeigt wieder alles. Ein Klick auf ein Diagramm oder eine Karte vergrößert sie. Schließen mit ✕, Klick daneben oder Esc. Am Handy für Diagramme am besten quer halten.</div>`},
+ warnstufen: {sym:"⚠️", titel:"Ereignisse & Warnstufen", kurz:"🔴 🟠 🌪️ 🚜 📡 ✅",
+  tipp:"Automatisch erkannte Veränderungen: Ernte 🚜, Wildschaden-Verdacht 🔴/🟠, Lager 🌪️, Radar-Ernte 📡, Entwarnung ✅.",
+  text:`<p>Jede neue Aufnahme wird mit der letzten freien Sicht auf dieselbe Fläche verglichen. Auffälligkeiten erscheinen hier und als ▼ im Diagramm:</p>
+   <ul><li><b>🔴 Wildschaden sehr wahrscheinlich</b> – mehrere Hinweise (nah am Wald, anfällige Zeit, fleckig, kein Unwetter) oder vom Radar bestätigt</li>
+   <li><b>🟠 möglicher Wildschaden</b> – nur einzelne Hinweise, vor Ort prüfen</li>
+   <li><b>🌪️ Lager/Hagel</b> – Unwetter im Zeitraum und große oder langgestreckte Stelle</li>
+   <li><b>🚜 Ernte</b>, <b>🌾 Abreife/Mahd</b>, <b>🌱 Auflaufen</b>, <b>🌲 Waldschaden</b></li>
+   <li><b>📡 Radar</b> – Ernte, erkannt trotz Wolken</li><li><b>✅ Entwarnung</b> – Stelle war später wieder grün (Schatten, Dunst)</li></ul>
+   <div class="kasten">Während der Rapsblüte und der Abreife werden keine Teilflächen-Warnungen ausgegeben – dann färbt sich ein Feld ohnehin ungleichmäßig.</div>`},
+ gruenkarte: {sym:"🗓️", titel:"Grünkarte", kurz:"Jeder Monat pixelgenau",
+  tipp:"Zeigt für jeden Monat, wie grün jede 10-m-Stelle war. Schieber rastet je Monat ein, ▶ spielt das Jahr ab.",
+  text:`<p>Für jeden Monat werden <b>alle wolkenfreien Satellitenaufnahmen</b> übereinandergelegt; für jeden 10-m-Bildpunkt zählt der mittlere Wert. So gibt es weniger Wolkenlöcher als bei einer einzelnen Aufnahme.</p>
+   <ul><li>Farbe wie beim Grün-Index: <b>rot/braun</b> = kahl, <b>gelb</b> = wenig Grün oder reif, <b>grün</b> = dichter Bestand</li>
+   <li><b>Weiß</b> = in diesem Monat immer bewölkt</li><li>Durchgestrichene Monate im Schieber: keine brauchbare Aufnahme</li></ul>
+   <div class="kasten">Gut zu sehen: wann welches Feld grün wird, Unterschiede <b>innerhalb</b> eines Feldes (Kuppen, Senken, Lücken) und die Reihenfolge der Ernte. Zur Auswahl stehen die letzten drei Jahre.</div>`},
+ radarkarte: {sym:"🛰️", titel:"Radarkarte", kurz:"Bestand trotz Wolken",
+  tipp:"Radar-Echo der beiden letzten Radaraufnahmen – auch bei Wolken. Dunkelgrün = hoher, dichter Bestand, braun = offener Boden.",
+  text:`<p>Die Karte zeigt das Echo der <b>zwei letzten Radaraufnahmen</b> (Sentinel-1). Sie funktioniert bei Wolken und im Winter.</p>
+   <ul><li><b>Dunkelgrün</b> = starkes Echo: hoher, dichter Bestand oder Wald</li><li><b>Hellgrün/gelb</b> = mittleres Echo: niedriger Bestand, Stoppel mit Aufwuchs</li>
+   <li><b>Braun</b> = schwaches Echo: glatter, offener Boden</li></ul>
+   <div class="kasten">Radar reagiert auch auf Bodenfeuchte und Bearbeitung (frisch gepflügt = rau = heller). Die Karte ist deshalb ein grober Überblick, kein genauer Messwert.</div>`},
+ fruchtfolge: {sym:"🔄", titel:"Fruchtfolge", kurz:"Welche Kultur wann wo",
+  tipp:"Kultur jedes Feldes in jedem Jahr seit 2017, aus dem Grünverlauf geschätzt. Gestreift mit ? = unsicher.",
+  text:`<p>Die Tabelle zeigt für jedes Feld und Jahr die <b>geschätzte Kultur</b> (siehe Thema „Kultur“). So erkennt man die Fruchtfolge, z. B. Raps – Getreide – Getreide – Raps.</p>
+   <p><b>Farben:</b> Raps gelb, Getreide ocker, Mais grün, Rübe lila, Sommerung hellgelb, Brache grau. <b>Gestreift mit „?“</b> = unsichere Schätzung.</p>
+   <div class="kasten">Für die Jagd interessant: In Maisjahren bietet ein Feld bis in den Herbst Deckung, in Rapsjahren ab April. Die Angaben sind Schätzungen aus Satellitendaten.</div>`},
+ bericht: {sym:"📋", titel:"Quartalsbericht", kurz:"Frühling und Sommer im Vergleich",
+  tipp:"Erscheint am 1. Juli und 1. Oktober: Wetter, jedes Feld und der Wald im Vergleich zu den anderen Jahren.",
+  text:`<p>Zweimal im Jahr (1. Juli für April–Juni, 1. Oktober für Juli–September) entsteht ein Bericht:</p>
+   <ul><li><b>Wetter:</b> Regen, Wasserbilanz, heiße Tage und Trockenphasen im Vergleich zu den Jahren seit 2017</li>
+   <li><b>Felder:</b> jedes Feld im Vergleich zu Jahren mit derselben Kultur – mit Deutung, ob Trockenheit der Grund sein kann</li>
+   <li><b>Wald:</b> Grün- und Feuchte-Index gegenüber anderen Jahren, Karte trockener Stellen, Käferwetter</li></ul>
+   <div class="kasten">Einzelne trockene Nester im Wald deuten eher auf Käfer oder Windwurf, ein flächiger Rückgang eher auf Trockenheit. Beides ist nur ein Hinweis – vor Ort prüfen.</div>`},
+ schwerpunkte: {sym:"🎯", titel:"Verdachtsstellen aller Jahre", kurz:"Gibt es Wildschaden-Schwerpunkte?",
+  tipp:"Wie oft jede Stelle seit 2017 als möglicher Wildschaden (🔴/🟠) auffiel. Gelb = 1 Jahr, orange = 2, rot = 3 und mehr.",
+  text:`<p>Alle Aufnahmen seit 2017 wurden genauso ausgewertet wie bei den Meldungen. Gezählt wird, in <b>wie vielen verschiedenen Jahren</b> jede 10-m-Stelle als 🔴 oder 🟠 auffiel.</p>
+   <ul><li><b>Gelb</b> = in einem Jahr auffällig</li><li><b>Orange</b> = in zwei Jahren</li><li><b>Rot</b> = in drei und mehr Jahren</li></ul>
+   <p><b>Zufallsvergleich:</b> Für jedes Feld wird geprüft, wie viel Fläche mehrfach getroffen würde, wenn die Stellen jedes Jahr rein zufällig lägen. Nur wenn deutlich mehr Fläche wiederkehrt als bei Zufall, gilt eine Stelle als <b>Schwerpunkt</b>.</p>
+   <div class="kasten">Ein schmaler, gerader Streifen an der Feldkante ist fast immer eine Grenzfrage (Nachbarschlag, Blühstreifen), kein Wildschaden. Einzelne gelbe Flecken sind normale Ereignisse eines Jahres. Die Karte wird einmal im Jahr neu berechnet.</div>`},
+ karten: {sym:"🗺️", titel:"Karten", kurz:"Deckung, Radar, Flächen, Wald",
+  tipp:"Deckungskarte (monatlich), Radarkarte (wolkenunabhängig), Orientierungskarte mit Feldnummern und die Waldkarte aus dem Quartalsbericht. Antippen vergrößert.",
+  text:`<ul><li><b>Deckungskarte</b> – siehe Thema „Deckungskarte“</li><li><b>Radarkarte</b> – siehe Thema „Radarkarte“</li>
+   <li><b>Orientierungskarte</b> – alle Flächen mit Nummer und Name</li><li><b>Verdachtsstellen</b> – siehe Thema „Verdachtsstellen aller Jahre“</li><li><b>Waldkarte</b> – Stellen, an denen der Wald trockener war als in anderen Jahren (aus dem letzten Quartalsbericht)</li></ul>`},
+ quellen: {sym:"📚", titel:"Datenquellen & Grenzen", kurz:"Woher die Daten stammen",
+  tipp:"", text:`<ul><li><b>Satellitenbilder:</b> Copernicus Sentinel-2 und Sentinel-1 der ESA (über Element 84 und Microsoft Planetary Computer)</li>
+   <li><b>Wetter:</b> Deutscher Wetterdienst, Station Bad Lauchstädt (über Bright Sky)</li><li><b>Luftbild:</b> DOP20 © GeoBasis-DE / LVermGeo ST, dl-de/by-2-0</li></ul>
+   <div class="kasten">Alle Auswertungen laufen automatisch auf einem kleinen Rechner und sind <b>Schätzungen aus Satellitendaten</b>. Die Auflösung beträgt 10 m – einzelne Pflanzen, Tiere oder sehr kleine Schäden sind nicht erkennbar. Sie ersetzen keinen Blick vor Ort.</div>`}
+};
+const REIHE = ["ndvi","radar","wetter","kultur","gruenkarte","deckung","radarkarte","fruchtfolge","warnstufen","schwerpunkte","bericht","flaechen","quellen"];
+const hilfe = document.getElementById("hilfe"), schleier = document.getElementById("hilfeschleier"),
+      detail = document.getElementById("detail"), tipp = document.getElementById("tipp");
+document.getElementById("kacheln").innerHTML = REIHE.map(k =>
+  `<button class="kachel" data-k="${k}"><div class="sym">${T[k].sym}</div><b>${T[k].titel}</b><span>${T[k].kurz}</span></button>`).join("");
+let zuletzt = null;
+function oeffnen(k){
+  tippZu();
+  zuletzt = document.activeElement;
+  if (k) zeigeThema(k); else hilfe.classList.remove("thema");
+  hilfe.classList.add("an"); schleier.classList.add("an"); hilfe.setAttribute("aria-hidden","false");
+  hilfe.scrollTop = 0; setTimeout(() => hilfe.querySelector(k ? ".zurueck" : ".kachel").focus(), 50);
+}
+function schliessen(){
+  hilfe.classList.remove("an"); schleier.classList.remove("an"); hilfe.setAttribute("aria-hidden","true");
+  if (zuletzt) zuletzt.focus();
+}
+function zeigeThema(k){
+  const t = T[k], i = REIHE.indexOf(k), weiter = REIHE.filter(x => x !== k).slice(0, 3);
+  detail.innerHTML = `<button class="zurueck">‹ Alle Themen</button><h3>${t.sym} ${t.titel}</h3>${t.text}
+    <div class="weiter">${weiter.map(x => `<button data-k="${x}">${T[x].sym} ${T[x].titel}</button>`).join("")}</div>`;
+  hilfe.classList.add("thema"); hilfe.scrollTop = 0;
+}
+hilfe.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.classList.contains("zu2")) return schliessen();
+  if (b.classList.contains("zurueck")) { hilfe.classList.remove("thema"); return; }
+  if (b.dataset.k) { zeigeThema(b.dataset.k); detail.querySelector(".zurueck").focus(); }
+});
+schleier.addEventListener("click", schliessen);
+document.getElementById("hilfeknopf").addEventListener("click", () => oeffnen());
+// i-Knoepfe an Diagrammen, Karten und Abschnitten
+let tippVon = null;
+function tippZu(){ tipp.classList.remove("an"); if (tippVon) tippVon.classList.remove("an"); tippVon = null; }
+document.querySelectorAll("[data-thema]").forEach(el => {
+  const k = el.dataset.thema, b = document.createElement("button");
+  b.className = "ik"; b.textContent = "i"; b.setAttribute("aria-label", "Erklärung: " + T[k].titel);
+  el.appendChild(b);
+  b.addEventListener("click", e => {
+    e.stopPropagation();
+    if (tippVon === b) return tippZu();
+    tippZu(); tippVon = b; b.classList.add("an");
+    tipp.innerHTML = `<b>${T[k].sym} ${T[k].titel}</b>${T[k].tipp}<br><button data-k="${k}">Mehr dazu →</button>`;
+    const r = b.getBoundingClientRect(), breite = Math.min(330, innerWidth - 24);
+    tipp.style.left = Math.max(12, Math.min(r.right + scrollX - breite, innerWidth - breite - 12)) + "px";
+    tipp.style.top = (r.bottom + scrollY + 8) + "px";
+    tipp.classList.add("an");
+  });
+});
+tipp.addEventListener("click", e => { const b = e.target.closest("button"); if (b) oeffnen(b.dataset.k); });
+document.addEventListener("click", e => { if (tippVon && !tipp.contains(e.target)) tippZu(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { tippZu(); if (hilfe.classList.contains("an")) schliessen(); } });
+addEventListener("resize", tippZu);
+})();
+</script></body></html>
